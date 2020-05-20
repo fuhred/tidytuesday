@@ -1,0 +1,141 @@
+---
+title: "volleyball"
+author: "fred"
+date: "5/19/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+```{r}
+vb_matches <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-19/vb_matches.csv', guess_max = 76000)
+
+```
+
+```{r}
+df=
+vb_matches %>%
+  # slice(1:2) %>%
+  select(
+         w_player1, w_p1_age,
+         w_player2, w_p2_age,
+         l_player1, l_p1_age,
+         l_player2, l_p2_age
+         ) %>%
+  
+  # probably a better way of doing the following with pivot_longer and regular expressions
+  # but aint nobody got time for that
+  
+  # rename as players 1 to 4, each with name and age variable
+  rename( 
+         player1_name=w_player1,
+         player1_age=w_p1_age, 
+         player2_name=w_player2,
+         player2_age=w_p2_age, 
+         player3_name=l_player1,
+         player3_age=l_p1_age, 
+         player4_name=l_player2,
+         player4_age=l_p2_age
+         ) %>%
+  
+  # make wins variable (1 is win, 0 is lose)
+  mutate(player1_win=1, player2_win=1, player3_win=0, player4_win=0) 
+ 
+df.long=df %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("player",".value"),
+    names_sep = "_"
+  ) %>%
+  filter(!is.na(age)) # drop any observations with missing age data
+df.long
+
+df.long.summary=df.long %>%
+  mutate(age_integer = floor(age)) %>% # variable for how we normally think of age
+  select(-player, -age) %>% # remove convenience variable (player#) and age (continuous)
+  group_by(name, age_integer) %>%
+  summarise(
+    win_pct = mean(win),
+    games = n()
+  )
+
+df.long.summary
+
+# i want variation in wins over age, so i need to remove anyone with no variation
+
+# make a df of anyone who has only played 1 game overall 
+df.remove=df.long.summary %>%
+  group_by(name) %>%
+  summarise(games=sum(games)) %>%
+  filter(games==1) %>%
+  select(-games)
+
+# make a df of anyone with 0% win record 
+df.remove2=df.long %>%
+  group_by(name) %>% 
+  summarise(
+    win_pct = mean(win), games = n()) %>%
+  filter(win_pct==0) %>%
+  select(name)
+
+# make a df of anyone with 100% win record 
+df.remove3=df.long %>%
+  group_by(name) %>% 
+  summarise(
+    win_pct = mean(win), games = n()) %>%
+  filter(win_pct==1) %>%
+  select(name)
+
+# remove these people
+df.long.summary=
+  df.long.summary %>%
+  anti_join(df.remove) %>% anti_join(df.remove2) %>% anti_join(df.remove3)
+```
+
+
+```{r}
+# following code randomly grabs a % of the data so i can test this more quickly
+dataset= sort(sample(nrow(df.long.summary),
+                     nrow(df.long.summary) *.05)
+              )
+test=df.long.summary[dataset,]
+```
+
+
+```{r, message=F, warning=F}
+df.long.summary %>%
+ggplot(aes(x=age_integer, y=win_pct)) +
+  
+  # lines for each player
+  geom_line(aes(group=name),
+            color="#c8cad7", alpha=.5, size=.1,
+            stat="smooth", method="loess", se=FALSE, span=1
+            ) +
+
+  # line for overall slope
+  geom_line(aes(color=win_pct),
+             stat="smooth", method="loess", se=FALSE, size=1, color="#8c7dfd") +
+  
+  scale_y_continuous(expand = c(0, 0)) + #remove padding between 0 and y axis line
+  coord_cartesian(xlim=c(16, 50), ylim=c(0,1)) +
+  labs(title="Beach Volleyball Win Percentage by Age", x = "Age", y="Win Percentage") +
+  theme_classic() + 
+  theme(panel.background = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.line.y = element_blank(),
+        axis.line.x = element_line(color="#999999"),
+        axis.ticks = element_blank(),
+        text = element_text(color="#999999"),
+        axis.text = element_text(color="#999999"),
+        plot.title = element_text(color = "black", hjust = 0.5)
+        )
+
+```
+
+```{r}
+ggsave("volleyball.png", height=5,width=7,dpi=300, type="cairo")
+```
+
+
