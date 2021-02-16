@@ -1,0 +1,71 @@
+---
+title: "Untitled"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggimage)
+
+theme_set(theme_bw())
+theme_update(axis.ticks = element_blank(), axis.title.y = element_blank(), legend.title = element_blank(),
+             panel.grid.minor = element_blank()
+             )
+```
+
+```{r}
+# Get the Data
+
+# Read in with tidytuesdayR package 
+# Install from CRAN via: install.packages("tidytuesdayR")
+# This loads the readme and all the datasets for the week of interest
+
+# Either ISO-8601 date or year/week works!
+
+tuesdata <- tidytuesdayR::tt_load('2021-02-16')
+tuesdata <- tidytuesdayR::tt_load(2021, week = 8)
+
+georgia_pop <- tuesdata$georgia_pop
+
+# Or read in the data manually
+
+georgia_pop <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/georgia_pop.csv')
+census <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/census.csv')
+furniture <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/furniture.csv')
+city_rural <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/city_rural.csv')
+income <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/income.csv')
+freed_slaves <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/freed_slaves.csv')
+occupation <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/occupation.csv')
+conjugal <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-16/conjugal.csv')
+
+```
+
+```{r, fig.width=3.622, fig.height=4.5511}
+p=georgia_pop %>%
+  rename(COLORED=Colored, WHITE=White) %>%
+  pivot_longer(cols=-Year, values_to = "PERCENTS") %>%
+  ggplot(aes(x=Year,y=PERCENTS)) +
+  geom_line(aes(linetype=name), size=.15) +
+  scale_y_continuous(trans = "reverse", breaks=seq(0, 100, by=5)) + 
+  scale_x_continuous(breaks = georgia_pop$Year) +
+  theme(
+        axis.text.x = element_text(size=3, margin=margin(t=-1)),
+        axis.title.x = element_text(size=3, margin=margin(t=9, b=0)),
+        axis.text.y = element_text(size=4),
+        panel.grid.major = element_line(color="#D1897C", size=.2), 
+        legend.position = "bottom", 
+        legend.margin =  margin(t=-18,r=0,b=21,l=70),
+        legend.text = element_text(size=3, margin=margin(t=0, r=80)),
+        plot.margin = margin(t=.63, r=.7, b=.0, l=.62, "in"),
+        panel.border = element_rect(size=.1),
+        legend.key.width = unit(.2, "in")
+        ) +
+  coord_flip(expand=F)
+
+  ggbackground(p, "background.png")
+
+```
+
+```{r}
+ggsave("xx.png", width=3.396, height=4.267, dpi=240, type="cairo")
+```
+
